@@ -22,7 +22,7 @@ mgsG=('\r%07\r\n'.encode('ascii'), #0
       '\r$1\r\n'.encode('ascii'), #7
       '\r$0\r\n'.encode('ascii')) #8
 mgsGn= (''.encode('ascii'),
-  '$D\r\n'.encode('ascii'),
+        '$D\r\n'.encode('ascii'),
 	'$B\r\n'.encode('ascii'),
 	'$9\r\n'.encode('ascii'),
 	'$7\r\n'.encode('ascii'),
@@ -86,48 +86,48 @@ time.sleep(3)
 print('Connect...')
 
 def mg_read(x, t):
-  now = time.time()
-  y=''.encode('ascii')              #ждем 10 секунд и показываем содержимое буфера
-  while (ser.inWaiting() !=0 ) or (now+t > time.time()):
-   if ser.inWaiting() !=0:
-    y = y + ser.read(ser.inWaiting())
-   time.sleep(0.03)
-  x = x + '\r\n'.encode('ascii') + y
-  print(str(y))
-  return x
-  
+        now = time.time()
+        y=''.encode('ascii')              #ждем 10 секунд и показываем содержимое буфера
+        while (ser.inWaiting() !=0 ) or (now+t > time.time()):
+            if ser.inWaiting() !=0:
+                y = y + ser.read(ser.inWaiting())
+            time.sleep(0.03)
+        x = x + '\r\n'.encode('ascii') + y
+        print(str(y))
+        return x
+
 def mg_write(x):
- for i in range(len(x)):
-  ser.write(x[i:i+1])
-  time.sleep(0.5)
+    for i in range(len(x)):
+        ser.write(x[i:i+1])
+        time.sleep(0.5)
 
 def opros1(i,x):
- t = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)  # delay
- print('\n\n\n'+'Open ' + str(mgsG[i])+'\n\n\n')
- x = x + mgsGn[i]                          #вспомогательная информация для записи в файл
- mg_write(mgsG[i])                        #заходим в нужный нуп
- if i==8:
-  mg_read(x, t)
-  mg_write(mgs3+mgs2[6])                  #выходим из первого нупа
-  x=mg_read(x, t)
-  mg_write(mgsA[0])
-  x=mg_read(x, t)
- else: 
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[3])                  #заходим в первый пункт меню
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[0])                  #G826
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[5])                  #заходим в главное меню
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[4])                  #заходим во второй пункт меню
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[1])                  #STATUS
-  x=mg_read(x, t)
-  mg_write(mgs3+mgs2[2])                  #STATUS R
-  x=mg_read(x, t)
- x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
- return x
+    t = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)  # delay
+    print('\n\n\n'+'Open ' + str(mgsG[i])+'\n\n\n')
+    x = x + mgsGn[i]                          #вспомогательная информация для записи в файл
+    mg_write(mgsG[i])                        #заходим в нужный нуп
+    if i==8:
+        mg_read(x, t)
+        mg_write(mgs3+mgs2[6])                  #выходим из первого нупа
+        x=mg_read(x, t)
+        mg_write(mgsA[0])
+        x=mg_read(x, t)
+    else: 
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[3])                  #заходим в первый пункт меню
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[0])                  #G826
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[5])                  #заходим в главное меню
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[4])                  #заходим во второй пункт меню
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[1])                  #STATUS
+        x=mg_read(x, t)
+        mg_write(mgs3+mgs2[2])                  #STATUS R
+        x=mg_read(x, t)
+    x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
+    return x
 
 x=''.encode('ascii')
 mg_write(mgsG[0])
@@ -151,36 +151,36 @@ x_G = x[:]
 
 
 def opros2(i,x):
- t = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)       # delay
- print('\n\n\n'+'Open ' + str(mgsA[i])+'\n\n\n')
- x = x + mgsAn[i]                          #вспомогательная информация для записи в файл
- if i==14:
-  mg_write(mgsA[0])
-  x=mg_read(x, t)
- mg_write(mgsA[i])                  #заходим в нужный нуп
- time.sleep(1)
- mg_write('\r\n'.encode('ascii')) 
- x=mg_read(x, t)
- mg_write(mgs2[3])                  #заходим в первый пункт меню
- x=mg_read(x, t)
- mg_write(mgs2[0])                  #G826
- x=mg_read(x, t)
- mg_write(mgs2[5])                  #заходим в главное меню
- x=mg_read(x, t)
- mg_write(mgs2[4])                  #заходим во второй пункт меню
- x=mg_read(x, t)
- mg_write(mgs2[1])                  #STATUS
- x=mg_read(x, t)
- if i==14:
-  mg_write(mgs2[5])                  #заходим в главное меню
-  x=mg_read(x, t)
-  mg_write(mgs2[6])                  #выходим из первого нупа
-  x=mg_read(x, t)
-  mg_write(mgsA[0])
-  x=mg_read(x, t)
-  mg_write(mgs3)
- x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
- return x
+    t = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)       # delay
+    print('\n\n\n'+'Open ' + str(mgsA[i])+'\n\n\n')
+    x = x + mgsAn[i]                          #вспомогательная информация для записи в файл
+    if i==14:
+        mg_write(mgsA[0])
+        x=mg_read(x, t)
+    mg_write(mgsA[i])                  #заходим в нужный нуп
+    time.sleep(1)
+    mg_write('\r\n'.encode('ascii')) 
+    x=mg_read(x, t)
+    mg_write(mgs2[3])                  #заходим в первый пункт меню
+    x=mg_read(x, t)
+    mg_write(mgs2[0])                  #G826
+    x=mg_read(x, t)
+    mg_write(mgs2[5])                  #заходим в главное меню
+    x=mg_read(x, t)
+    mg_write(mgs2[4])                  #заходим во второй пункт меню
+    x=mg_read(x, t)
+    mg_write(mgs2[1])                  #STATUS
+    x=mg_read(x, t)
+    if i==14:
+        mg_write(mgs2[5])                  #заходим в главное меню
+        x=mg_read(x, t)
+        mg_write(mgs2[6])                  #выходим из первого нупа
+        x=mg_read(x, t)
+        mg_write(mgsA[0])
+        x=mg_read(x, t)
+        mg_write(mgs3)
+    x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
+    return x
 
 x=''.encode('ascii')
 time.sleep(5)
@@ -206,43 +206,43 @@ x_A = x[:]
 #z=str(x).split('\\r\\n')
 print('--------------------------------------------------------------------------')
 for key in str(x_G).split('\\r\\n'):
- print(key)
+    print(key)
 for key in str(x_A).split('\\r\\n'):
- print(key)
+    print(key)
 print('--------------------------------------------------------------------------')
 #
 
 
 def get_filename_data(s):
-   #name n #ext r
-   #проверяем что у файла есть расширение и разделяем
-   if s.find('.')>0:
-      (n,r)=s.rsplit('.',1)
-   else:
-      (n,r)=(s,'')
-   if r!='':
-      r='.'+r
-   #добавляем к имени файла дату
-   n = n + '_' + \
-     (lambda t : '0'+str(time.localtime()[2]) if time.localtime()[2]<10 \
-       else str(time.localtime()[2]))(0) \
-    + (lambda t : '0'+str(time.localtime()[1]) if time.localtime()[1]<10 \
-       else str(time.localtime()[1]))(0) \
-    + str(time.localtime()[0])[2:]
-   return n+r
+            #name n #ext r
+            #проверяем что у файла есть расширение и разделяем
+            if s.find('.')>0:
+                        (n,r)=s.rsplit('.',1)
+            else:
+                        (n,r)=(s,'')
+            if r!='':
+                        r='.'+r
+            #добавляем к имени файла дату
+            n = n + '_' + \
+                    (lambda t : '0'+str(time.localtime()[2]) if time.localtime()[2]<10 \
+                            else str(time.localtime()[2]))(0) \
+                + (lambda t : '0'+str(time.localtime()[1]) if time.localtime()[1]<10 \
+                            else str(time.localtime()[1]))(0) \
+                + str(time.localtime()[0])[2:]
+            return n+r
 
 def rename_file(path_file):
-   #выделяем имя файла из путь+имя
-   path1=os.path.split(path_file)[0]
-   f=os.path.split(path_file)[1]
-   #получаем имя файла с учетом даты
-   f_data=get_filename_data(f)
-   #проверяем существует ли каталог, в который поместим файлы
-   if not os.path.exists(path1):
-    os.system('echo create katalog')
-    os.makedirs(path1)
-   #новое имя
-   return (path1+'\\'+f_data)
+            #выделяем имя файла из путь+имя
+            path1=os.path.split(path_file)[0]
+            f=os.path.split(path_file)[1]
+            #получаем имя файла с учетом даты
+            f_data=get_filename_data(f)
+            #проверяем существует ли каталог, в который поместим файлы
+            if not os.path.exists(path1):
+                os.system('echo create katalog')
+                os.makedirs(path1)
+            #новое имя
+            return (path1+'\\'+f_data)
 
 
 
@@ -253,32 +253,16 @@ def rename_file(path_file):
 f=str(sys.argv[1])                           #имя файла берем из аргумента
 f=rename_file(f)
 try:
- if __name__ == '__main__':             # если запускается как сценарий  
-  if (f) != (''):                       # отобразить постранично содержимое 
-   myfile=open(f,'w')                   # файла, указанного в командной строк
-   for key in str(x_G).split('\\r\\n'):
-     myfile.write(key+'\n')
-   for key in str(x_A).split('\\r\\n'):
-     myfile.write(key+'\n')
-   myfile.close()
-   print('Save as '+ f) 
+    if __name__ == '__main__':             # если запускается как сценарий  
+        if (f) != (''):                       # отобразить постранично содержимое 
+            myfile=open(f,'w')                   # файла, указанного в командной строк
+            for key in str(x_G).split('\\r\\n'):
+                    myfile.write(key+'\n')
+            for key in str(x_A).split('\\r\\n'):
+                    myfile.write(key+'\n')
+            myfile.close()
+            print('Save as '+ f) 
 except:
- print('error')                          
+    print('error')                          
 os.system('pause')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
