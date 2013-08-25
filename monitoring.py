@@ -7,6 +7,7 @@ import time
 import serial
 import os
 import sys
+import re
 
 
 #-------------------------------------------------------------------------------------
@@ -71,7 +72,6 @@ mgsAn= (''.encode('ascii'),
 	'OUP-Master\r\n'.encode('ascii'))
 
 
-
 ser=serial.Serial()
 ser.baudrate=9600
 ser.port=8
@@ -86,16 +86,16 @@ time.sleep(3)
 print('Connect...')
 
 def mg_read(x, t):
-        now = time.time()
-        y=''.encode('ascii')              #ждем 10 секунд и показываем содержимое буфера
-        while (ser.inWaiting() !=0 ) or (now+t > time.time()):
-            if ser.inWaiting() !=0:
-                y = y + ser.read(ser.inWaiting())
-            time.sleep(0.03)
-        x = x + '\r\n'.encode('ascii') + y
-        print(str(y))
-        return x
-
+    now = time.time()
+    y=''.encode('ascii')              #ждем 10 секунд и показываем содержимое буфера
+    while (ser.inWaiting() !=0 ) or (now+t > time.time()):
+        if ser.inWaiting() !=0:
+            y = y + ser.read(ser.inWaiting())
+        time.sleep(0.03)
+    x = x + '\r\n'.encode('ascii') + y
+    print(str(y))
+    return x
+  
 def mg_write(x):
     for i in range(len(x)):
         ser.write(x[i:i+1])
@@ -129,7 +129,7 @@ def opros1(i,x):
     x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
     return x
 
-x=''.encode('ascii')
+x='\r\n'.encode('ascii')
 mg_write(mgsG[0])
 time.sleep(10)
 x=opros1(1,x)
@@ -143,7 +143,6 @@ opros1(8,''.encode('ascii'))
 mg_write(mgs3)
 
 x_G = x[:]
-
 
 #-------------------------------------------------------------------------------------
 #                                    side 2
@@ -182,7 +181,7 @@ def opros2(i,x):
     x=x+'\r\n\r\n\r\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n\r\n\r\n'.encode('ascii')
     return x
 
-x=''.encode('ascii')
+x='\r\n'.encode('ascii')
 time.sleep(5)
 x=opros2(1,x)
 x=opros2(2,x)
@@ -202,6 +201,7 @@ ser.close()
 print('Close.')
 x_A = x[:]
 
+
 #Вывод информации на экран
 #z=str(x).split('\\r\\n')
 print('--------------------------------------------------------------------------')
@@ -214,40 +214,44 @@ print('-------------------------------------------------------------------------
 
 
 def get_filename_data(s):
-            #name n #ext r
-            #проверяем что у файла есть расширение и разделяем
-            if s.find('.')>0:
-                        (n,r)=s.rsplit('.',1)
-            else:
-                        (n,r)=(s,'')
-            if r!='':
-                        r='.'+r
-            #добавляем к имени файла дату
-            n = n + '_' + \
-                    (lambda t : '0'+str(time.localtime()[2]) if time.localtime()[2]<10 \
-                            else str(time.localtime()[2]))(0) \
-                + (lambda t : '0'+str(time.localtime()[1]) if time.localtime()[1]<10 \
-                            else str(time.localtime()[1]))(0) \
-                + str(time.localtime()[0])[2:]
-            return n+r
+    #name n #ext r
+    #проверяем что у файла есть расширение и разделяем
+    if s.find('.')>0:
+        (n,r)=s.rsplit('.',1)
+    else:
+        (n,r)=(s,'')
+    if r!='':
+        r='.'+r
+    #добавляем к имени файла дату
+    n = n + '_' + \
+        (lambda t : '0'+str(time.localtime()[2]) if time.localtime()[2]<10 \
+         else str(time.localtime()[2]))(0) \
+      + (lambda t : '0'+str(time.localtime()[1]) if time.localtime()[1]<10 \
+         else str(time.localtime()[1]))(0) \
+      + str(time.localtime()[0])[2:]
+    return n+r
 
 def rename_file(path_file):
-            #выделяем имя файла из путь+имя
-            path1=os.path.split(path_file)[0]
-            f=os.path.split(path_file)[1]
-            #получаем имя файла с учетом даты
-            f_data=get_filename_data(f)
-            #проверяем существует ли каталог, в который поместим файлы
-            if not os.path.exists(path1):
-                os.system('echo create katalog')
-                os.makedirs(path1)
-            #новое имя
-            return (path1+'\\'+f_data)
+    #выделяем имя файла из путь+имя
+    path1=os.path.split(path_file)[0]
+    f=os.path.split(path_file)[1]
+    #получаем имя файла с учетом даты
+    f_data=get_filename_data(f)
+    #проверяем существует ли каталог, в который поместим файлы
+    if not os.path.exists(path1):
+        os.system('echo create katalog')
+        os.makedirs(path1)
+    #новое имя
+    return (path1+'\\'+f_data)
 
 
+def matchLineWithPattern(text, pattern):
+    for match in re.finditer(pattern, text):
+        s = match.start()
+        e = match.end()
+        return ('%s' % text[s:e])
 
-
-
+wrmatch = lambda myfile, x: myfile.write(''.join((x,'\n')) ) if x else x
 
 
 f=str(sys.argv[1])                           #имя файла берем из аргумента
@@ -256,13 +260,18 @@ try:
     if __name__ == '__main__':             # если запускается как сценарий  
         if (f) != (''):                       # отобразить постранично содержимое 
             myfile=open(f,'w')                   # файла, указанного в командной строк
+            pattern  = '(^\$D$)|(^\$B$)|(^\$9$)|(^\$7$)|(^\$5$)|(^\$3$)|(^\$1$)|(^OP-Slave$)|(^6/2-Master$)|(^6/2-Slave$)|(^5/2-Master$)|(^5/2-Slave$)|(^4/2-Master$)|(^4/2-Slave$)|(^3/2-Master$)|(^3/2-Slave$)|(^2/2-Master$)|(^2/2-Slave$)|(^1/2-Master$)|(^1/2-Slave$)|(^OUP-Master$)|(Errored blocks(\d|[ :])+)|(SYNC: ([A-Za-z0-9]|[ :.+])+)|(GAIN:.[.\d]+.*SQ:.[.\d]+)|(Rx gain.*[.\d]+)|(Loop attn.*[.\d]+)|(SNR.*[.\d]+)'
             for key in str(x_G).split('\\r\\n'):
-                    myfile.write(key+'\n')
+                wrmatch(myfile, matchLineWithPattern(key, pattern))
             for key in str(x_A).split('\\r\\n'):
-                    myfile.write(key+'\n')
+                wrmatch(myfile, matchLineWithPattern(key, pattern))
+            for key in str(x_G).split('\\r\\n'):
+                myfile.write(key+'\n')
+            for key in str(x_A).split('\\r\\n'):
+                myfile.write(key+'\n')
             myfile.close()
             print('Save as '+ f) 
 except:
-    print('error')                          
-os.system('pause')
+    print('error') 
 
+os.system('pause')
