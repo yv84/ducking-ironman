@@ -4,10 +4,11 @@
 # Yudintsev Vladimir / 01.07.2012
 
 import time
-import serial
 import os
 import sys
 import re
+
+import serial
 
 
 #-------------------------------------------------------------------------------------
@@ -205,10 +206,10 @@ x_A = x[:]
 #Вывод информации на экран
 #z=str(x).split('\\r\\n')
 print('--------------------------------------------------------------------------')
-for key in str(x_G).split('\\r\\n'):
-    print(key)
-for key in str(x_A).split('\\r\\n'):
-    print(key)
+for i in str(x_G).split('\\r\\n'):
+    print(i)
+for i in str(x_A).split('\\r\\n'):
+    print(i)
 print('--------------------------------------------------------------------------')
 #
 
@@ -224,9 +225,11 @@ def get_filename_data(s):
         r='.'+r
     #добавляем к имени файла дату
     n = n + '_' + \
-        (lambda t : '0'+str(time.localtime()[2]) if time.localtime()[2]<10 \
+        (lambda t : '0'+str(time.localtime()[2]) \
+            if time.localtime()[2]<10 \
          else str(time.localtime()[2]))(0) \
-      + (lambda t : '0'+str(time.localtime()[1]) if time.localtime()[1]<10 \
+      + (lambda t : '0'+str(time.localtime()[1]) \
+            if time.localtime()[1]<10 \
          else str(time.localtime()[1]))(0) \
       + str(time.localtime()[0])[2:]
     return n+r
@@ -245,14 +248,66 @@ def rename_file(path_file):
     return (path1+'\\'+f_data)
 
 
-def matchLineWithPattern(text, pattern):
-    for match in re.finditer(pattern, text):
-        s = match.start()
-        e = match.end()
-        return ('%s' % text[s:e])
+# match pattern -> file
+wrmatch = lambda myfile, x, val: \
+    myfile.write(''.join((x,' : ', val if val else '', '\n')) ) \
+    if x else x
 
-wrmatch = lambda myfile, x: myfile.write(''.join((x,'\n')) ) if x else x
+# create Gen for pattern: join, decode -> del \r\n -> add '|'
+namemgsGen = lambda x: ((lambda i : \
+    ''.join((i.decode('latin-1').replace('$', '\$')[:-2], '|')) \
+    if i else '')(i) for i in x)
 
+
+patternGn    = ''.join((r"""(?x)
+    ^
+    (?:
+        (?P<name>""",
+        ''.join((namemgsGen(mgsGn)) )[:-1],
+        r""")
+      |
+        (?:
+        Errored\sblocks\s+
+            :\s\s    (?P<err1>\d+)   \s\s    (?P<err2>\d+)
+            # Errored blocks           :  00000000  00000000
+        |
+        SYNC: .+ 
+            GAIN:.?(?P<gain>\d+\.?\d*)\s+
+            SQ:.?(?P<sq>\d+\.?\d*)
+            # SYNC: 11    OPS: 11    PWR:+11.11    GAIN:+11.11    SQ:+11.1
+        )
+    )
+    $
+    """))
+
+
+patternAn    = ''.join((r"""(?x)
+    ^
+    (?:
+        (?P<name>""",
+        ''.join((namemgsGen(mgsAn)) )[:-1],
+        r""")
+      |
+        (?:
+        Errored\sblocks\s+
+            :\s\s    (?P<err1>\d+).*
+            # Errored blocks           :  00000000  00000000
+        |
+        Rx\sgain\s\s\s
+            :\s\s(?P<gain>\d+\.?\d*)\s\w\w
+            #Rx gain   :  11.1
+        |
+        Loop\sattn\.
+            :\s\s(?P<loop>\d+\.?\d*)\s\w\w
+            #Loop attn.:  11.1
+        |
+        SNR\s+
+            :\s\s(?P<snr>\d+\.?\d*)\s\w\w
+            #SNR       :  11.1
+        )
+    )
+    $
+    """))
 
 f=str(sys.argv[1])                           #имя файла берем из аргумента
 f=rename_file(f)
@@ -260,15 +315,41 @@ try:
     if __name__ == '__main__':             # если запускается как сценарий  
         if (f) != (''):                       # отобразить постранично содержимое 
             myfile=open(f,'w')                   # файла, указанного в командной строк
-            pattern  = '(^\$D$)|(^\$B$)|(^\$9$)|(^\$7$)|(^\$5$)|(^\$3$)|(^\$1$)|(^OP-Slave$)|(^6/2-Master$)|(^6/2-Slave$)|(^5/2-Master$)|(^5/2-Slave$)|(^4/2-Master$)|(^4/2-Slave$)|(^3/2-Master$)|(^3/2-Slave$)|(^2/2-Master$)|(^2/2-Slave$)|(^1/2-Master$)|(^1/2-Slave$)|(^OUP-Master$)|(Errored blocks(\d|[ :])+)|(SYNC: ([A-Za-z0-9]|[ :.+])+)|(GAIN:.[.\d]+.*SQ:.[.\d]+)|(Rx gain.*[.\d]+)|(Loop attn.*[.\d]+)|(SNR.*[.\d]+)'
-            for key in str(x_G).split('\\r\\n'):
-                wrmatch(myfile, matchLineWithPattern(key, pattern))
-            for key in str(x_A).split('\\r\\n'):
-                wrmatch(myfile, matchLineWithPattern(key, pattern))
-            for key in str(x_G).split('\\r\\n'):
-                myfile.write(key+'\n')
-            for key in str(x_A).split('\\r\\n'):
-                myfile.write(key+'\n')
+
+            regex = re.compile(patternGn)
+            for line in str(x_G).split('\\r\\n'):
+                match = regex.search(line)
+                if match:
+                    if match.groupdict()['name']: 
+                        wrmatch(myfile, '\n', match.groupdict()['name'])
+                    if match.groupdict()['err1']: 
+                        wrmatch(myfile, 'EB(M) ', str(int(match.groupdict()['err1'])) )
+                    if match.groupdict()['err2']: 
+                        wrmatch(myfile, 'EB(S) ', str(int(match.groupdict()['err2'])) )
+                    if match.groupdict()['gain']: 
+                        wrmatch(myfile, 'Gain  ', match.groupdict()['gain'])
+                    if match.groupdict()['sq']: 
+                        wrmatch(myfile, 'SQ    ', match.groupdict()['sq'])
+            
+            regex = re.compile(patternAn)
+            for line in str(x_A).split('\\r\\n'):
+                match = regex.search(line)
+                if match:
+                    if match.groupdict()['name']: 
+                        wrmatch(myfile, '\n', match.groupdict()['name'])
+                    if match.groupdict()['err1']: 
+                        wrmatch(myfile, 'EB(L) ', str(int(match.groupdict()['err1'])) )
+                    if match.groupdict()['gain']: 
+                        wrmatch(myfile, 'RX    ', match.groupdict()['gain'])
+                    if match.groupdict()['loop']: 
+                        wrmatch(myfile, 'LOOP  ', match.groupdict()['loop'])
+                    if match.groupdict()['snr']: 
+                        wrmatch(myfile, 'SNR   ', match.groupdict()['snr'])
+
+            for i in str(x_G).split('\\r\\n'):
+                myfile.write(i+'\n')
+            for i in str(x_A).split('\\r\\n'):
+                myfile.write(i+'\n')
             myfile.close()
             print('Save as '+ f) 
 except:
