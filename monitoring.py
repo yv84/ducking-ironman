@@ -4,16 +4,14 @@
 # Юдинцев В.Н. / 01.07.2012
 
 import time
+import datetime
 import os
 import sys
 import re
 
 import serial
 
-
-#-------------------------------------------------
-#                  side 1
-#-------------------------------------------------
+#-----------------------------------------
 mgsG = (b'\r%07\r\n', #0
          b'\r$D\r\n', #1
          b'\r$B\r\n', #2
@@ -72,20 +70,6 @@ mgsAn = (b'',
     b'1/2-Slave\r\n',
     b'OUP-Master\r\n')
 
-
-
-ser = serial.Serial()
-ser.baudrate = 9600
-ser.port = 8
-ser.parity = 'N'
-ser.stopbits = 1
-ser.timeout = 60
-ser.xonxoff = True
-ser.rtscts = False
-ser.dsrdtr = False
-ser.open()
-print('Connect...')
-
 def return_bytes(func):          # for join
     def wrapper(*args, **kwargs):
         func(*args, **kwargs)
@@ -96,25 +80,33 @@ def return_bytes(func):          # for join
 def sleep(t):
     time.sleep(t)
 
-def mg_read(t):
+def pretty_print(s:bytes) -> str:
+    return '\n'.join(
+            str(i)[2:-1] for i in re.split(
+            b'(?:\r\n|\r|\n|[\x1b]\S*?(?:H|J)\d*){1,}',
+            s) if i)
+    
+def mg_read(t:float) -> bytes:
     now = time.time()
     y = b''  #ждем 10 секунд и показываем содержимое буфера
     while (ser.inWaiting() !=0 ) or (now+t > time.time()):
         if ser.inWaiting() !=0:
             y += ser.read(ser.inWaiting())
         sleep(0.03)
-    print(str(y))
+    print(pretty_print(y))
     return b'\r\n' + y
 
 @return_bytes
-def mg_write(x):
+def mg_write(x:bytes):
     for i in range(len(x)):
         ser.write(x[i:i+1])
         sleep(0.5)
 
+#-------------------------------------------------
+#                  side 1
+#-------------------------------------------------
 
-
-def opros1(i):
+def opros1(i:int) -> bytes:
     t = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)  # delay
     print('\n\n\n'+'Open ' + str(mgsG[i])+'\n\n\n')
     s = mgsGn[i]       
@@ -143,28 +135,11 @@ def opros1(i):
         mg_read(t)))
     return s
 
-sleep(3)
-mg_write(mgsG[0])
-sleep(10)
-
-x_G = b''.join(
-    (b'\r\n', (b''.join(
-        (b'\r\n'*3, b'!'*40, b'\r\n'*3))
-        ).join(
-        [opros1(i) for i in range(1,8)])
-    )
-)
-
-opros1(8)
-mg_write(mgs3)
-
-
-#------------------------------------------------------
+#-------------------------------------------------
 #                   side 2
-#-----------------------------------------------------
+#-------------------------------------------------
 
-
-def opros2(i):
+def opros2(i:int) -> bytes:
     t = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)       # delay
     print('\n\n\n'+'Open ' + str(mgsA[i])+'\n\n\n')
     s = mgsAn[i]                 
@@ -198,50 +173,22 @@ def opros2(i):
         mg_write(mgs3)))
     return s
 
-sleep(5)
-x_A = b''.join(
-    (b'\r\n', (b''.join(
-        (b'\r\n'*3, b'!'*40, b'\r\n'*3))
-        ).join(
-        [opros2(i) for i in range(1,15)])
-    )
-)
-
-ser.close()
-print('Close.')
-
-#Вывод информации на экран
-#z=str(x).split('\\r\\n')
-print('-'*74)
-for key in str(x_G).split('\\r\\n'):
-    print(key)
-for key in str(x_A).split('\\r\\n'):
-    print(key)
-print('-'*74)
-#
-
-
-def get_filename_data(s):
+#-------------------------------------------------
+def get_filename_data(s:str) -> str:
     #name n #ext r
     #проверяем что у файла есть расширение и разделяем
     if s.find('.')>0:
         (n,r) = s.rsplit('.',1)
+        r = '.'+r
     else:
         (n,r) = (s,'')
-    if r != '':
-        r = '.'+r
     #добавляем к имени файла дату
-    n = n + '_' + \
-        (lambda t: '0'+str(time.localtime()[2]) \
-            if time.localtime()[2]<10 \
-         else str(time.localtime()[2]))(0) \
-      + (lambda t: '0'+str(time.localtime()[1]) \
-            if time.localtime()[1]<10 \
-         else str(time.localtime()[1]))(0) \
-      + str(time.localtime()[0])[2:]
-    return n+r
+    return ''.join((
+        n,
+        '_', datetime.datetime.now().strftime("%d%m%y"),
+        r))
 
-def rename_file(path_file):
+def rename_file(path_file:str) -> str:
     #выделяем имя файла из путь+имя
     path1 = os.path.split(path_file)[0]
     f = os.path.split(path_file)[1]
@@ -252,7 +199,7 @@ def rename_file(path_file):
         os.system('echo create katalog')
         os.makedirs(path1)
     #новое имя
-    return (path1+'\\'+f_data)
+    return os.path.normpath(path1+'/'+f_data)
 
 
 # match pattern -> file
@@ -316,52 +263,107 @@ patternAn = ''.join((r"""(?x)
     $
     """))
 
-f = str(sys.argv[1])                           #имя файла берем из аргумента
-f = rename_file(f)
+def write_sideGn(pfile, x_G:bytes, patternGn:str):
+    regex = re.compile(patternGn)
+
+    for line in str(x_G).split('\\r\\n'):
+        match = regex.search(line)
+        if match:
+            if match.groupdict()['name']: 
+                wrmatch(pfile, '\n', match.groupdict()['name'])
+            if match.groupdict()['err1']: 
+                wrmatch(pfile, 'EB(M) ', str(int(match.groupdict()['err1'])) )
+            if match.groupdict()['err2']: 
+                wrmatch(pfile, 'EB(S) ', str(int(match.groupdict()['err2'])) )
+            if match.groupdict()['gain']: 
+                wrmatch(pfile, 'Gain  ', match.groupdict()['gain'])
+            if match.groupdict()['sq']: 
+                wrmatch(pfile, 'SQ    ', match.groupdict()['sq']) 
+    
+def write_sideAn(pfile, x_A:bytes, patternAn:str):
+    regex = re.compile(patternAn)
+    
+    for line in str(x_A).split('\\r\\n'):
+        match = regex.search(line)
+        if match:
+            if match.groupdict()['name']: 
+                wrmatch(pfile, '\n', match.groupdict()['name'])
+            if match.groupdict()['err1']: 
+                wrmatch(pfile, 'EB(L) ', str(int(match.groupdict()['err1'])) )
+            if match.groupdict()['gain']: 
+                wrmatch(pfile, 'RX    ', match.groupdict()['gain'])
+            if match.groupdict()['loop']: 
+                wrmatch(pfile, 'LOOP  ', match.groupdict()['loop'])
+            if match.groupdict()['snr']: 
+                wrmatch(pfile, 'SNR   ', match.groupdict()['snr'])
+    
+def getExecPath():
+        try:
+            sFile = os.path.abspath(sys.modules['__main__'].__file__)
+        except:
+            sFile = sys.executable
+        return os.path.dirname(sFile)
+
+
+#-------------------------------------------------
 try:
-    if __name__ == '__main__':             # если запускается как сценарий  
-        if (f) != (''):                       # отобразить постранично содержимое 
-            myfile = open(f,'w')                   # файла, указанного в командной строк
+    f = os.path.normpath(str(sys.argv[1]))  #имя файла берем из аргумента
+except IndexError:
+    f = os.path.normpath(getExecPath() + '/../MG_log/MG_log.txt')
 
-            regex = re.compile(patternGn)
+try:
+    f = rename_file(f)
+    print(f)
 
-            for line in str(x_G).split('\\r\\n'):
-                match = regex.search(line)
-                if match:
-                    if match.groupdict()['name']: 
-                        wrmatch(myfile, '\n', match.groupdict()['name'])
-                    if match.groupdict()['err1']: 
-                        wrmatch(myfile, 'EB(M) ', str(int(match.groupdict()['err1'])) )
-                    if match.groupdict()['err2']: 
-                        wrmatch(myfile, 'EB(S) ', str(int(match.groupdict()['err2'])) )
-                    if match.groupdict()['gain']: 
-                        wrmatch(myfile, 'Gain  ', match.groupdict()['gain'])
-                    if match.groupdict()['sq']: 
-                        wrmatch(myfile, 'SQ    ', match.groupdict()['sq'])
-            
-            regex = re.compile(patternAn)
-            
-            for line in str(x_A).split('\\r\\n'):
-                match = regex.search(line)
-                if match:
-                    if match.groupdict()['name']: 
-                        wrmatch(myfile, '\n', match.groupdict()['name'])
-                    if match.groupdict()['err1']: 
-                        wrmatch(myfile, 'EB(L) ', str(int(match.groupdict()['err1'])) )
-                    if match.groupdict()['gain']: 
-                        wrmatch(myfile, 'RX    ', match.groupdict()['gain'])
-                    if match.groupdict()['loop']: 
-                        wrmatch(myfile, 'LOOP  ', match.groupdict()['loop'])
-                    if match.groupdict()['snr']: 
-                        wrmatch(myfile, 'SNR   ', match.groupdict()['snr'])
-            
-            for key in str(x_G).split('\\r\\n'):
-                myfile.write(key+'\n')
-            for key in str(x_A).split('\\r\\n'):
-                myfile.write(key+'\n')
-            myfile.close()
-            print('Save as '+ f) 
-except:
-    print('error')                          
-os.system('pause')
+    ser = serial.Serial()
+    ser.baudrate = 9600
+    ser.port = 8
+    ser.parity = 'N'
+    ser.stopbits = 1
+    ser.timeout = 60
+    ser.xonxoff = True
+    ser.rtscts = False
+    ser.dsrdtr = False
+    ser.open()
+    print('Connect rs-232 port...')
+    
+    x_G = b''.join((
+        sleep(3), 
+        mg_write(mgsG[0]),
+        sleep(10),
+        b'\r\n', 
+            (b''.join(
+            (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
+            ).join([opros1(i) for i in range(1,8)],),
+        opros1(8),
+        mg_write(mgs3),
+        )
+    )
+    
+    x_A = b''.join((
+        sleep(5),
+        b'\r\n', 
+            (b''.join(
+            (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
+            ).join([opros2(i) for i in range(1,15)],),
+        )
+    )
+
+    ser.close()
+    print('Close rs-232 port.')
+    
+    print('-'*74)
+
+    with open(f,'w') as myfile:
+        write_sideGn(myfile, x_G, patternGn)
+        write_sideAn(myfile, x_A, patternAn)
+        myfile.write(pretty_print(x_G))
+        myfile.write(pretty_print(x_A))
+        print('Save as '+ f) 
+
+except Exception as err:
+    print('Error: %s' %err)
+finally:
+    os.system('pause')
+
 
