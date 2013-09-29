@@ -1,13 +1,14 @@
 #!/usr/local/bin/python
 # coding: utf-8
 # Python 3.2.1.1
-# Юдинцев В.Н. / 01.07.2012
+# Yudintsev V.N. / 01.07.2012
 
 import time
 import datetime
 import os
 import sys
 import re
+import subprocess
 
 import serial
 
@@ -88,7 +89,7 @@ def pretty_print(s:bytes) -> str:
     
 def mg_read(t:float) -> bytes:
     now = time.time()
-    y = b''  #ждем 10 секунд и показываем содержимое буфера
+    y = b''  # wait 10 sec and read buff rs-232
     while (ser.inWaiting() !=0 ) or (now+t > time.time()):
         if ser.inWaiting() !=0:
             y += ser.read(ser.inWaiting())
@@ -103,7 +104,7 @@ def mg_write(x:bytes):
         sleep(0.5)
 
 #-------------------------------------------------
-#                  side 1
+#                 side 1
 #-------------------------------------------------
 
 def opros1(i:int) -> bytes:
@@ -136,7 +137,7 @@ def opros1(i:int) -> bytes:
     return s
 
 #-------------------------------------------------
-#                   side 2
+#                  side 2
 #-------------------------------------------------
 
 def opros2(i:int) -> bytes:
@@ -176,42 +177,34 @@ def opros2(i:int) -> bytes:
 #-------------------------------------------------
 def get_filename_data(s:str) -> str:
     #name n #ext r
-    #проверяем что у файла есть расширение и разделяем
+    # if ext exist
     if s.find('.')>0:
         (n,r) = s.rsplit('.',1)
         r = '.'+r
     else:
         (n,r) = (s,'')
-    #добавляем к имени файла дату
     return ''.join((
         n,
         '_', datetime.datetime.now().strftime("%d%m%y"),
         r))
 
 def rename_file(path_file:str) -> str:
-    #выделяем имя файла из путь+имя
+    # get name from path+name
     path1 = os.path.split(path_file)[0]
     f = os.path.split(path_file)[1]
-    #получаем имя файла с учетом даты
+    # get name+date(today)
     f_data = get_filename_data(f)
-    #проверяем существует ли каталог, в который поместим файлы
+    # check if dir exist
     if not os.path.exists(path1):
         os.system('echo create katalog')
         os.makedirs(path1)
-    #новое имя
+    # get new name
     return os.path.normpath(path1+'/'+f_data)
-
-
-# match pattern -> file
-wrmatch = lambda myfile, x, val: \
-    myfile.write(''.join((x,' : ', val if val else '', '\n')) ) \
-    if x else x
 
 # create Gen for pattern: join, decode -> del \r\n -> add '|'
 namemgsGen = lambda x: ((lambda i : \
     ''.join((i.decode('latin-1').replace('$', '\$')[:-2], '|')) \
     if i else '')(i) for i in x)
-
 
 patternGn = ''.join((r"""(?x)
     ^
@@ -233,7 +226,6 @@ patternGn = ''.join((r"""(?x)
     )
     $
     """))
-
 
 patternAn = ''.join((r"""(?x)
     ^
@@ -263,41 +255,179 @@ patternAn = ''.join((r"""(?x)
     $
     """))
 
-def write_sideGn(pfile, x_G:bytes, patternGn:str):
+
+class View():
+    def __init__(self, side='', type='', name='',
+            eb='', gain='', sq='', 
+            loop='', snr=''):
+        self.side = side
+        self.type = type
+        self.name = name
+        self.eb = eb
+        self.gain = gain
+        self.sq = sq
+        self.loop = loop
+        self.snr = snr
+
+    def excel_view(self): # split \t
+        f = lambda *args: \
+            '\t'.join(str(i).replace('.',',') for i in args)
+        if self.side == 'Gn':
+            s = f(self.eb, self.gain, self.sq,)
+        elif self.side == 'An':
+            s = f(self.eb, self.gain,
+                self.loop, self.snr,)
+        else:
+            s = ''
+        return s
+
+    def view(self):
+        if self.side == 'Gn':
+            s = ''.join((
+                "%-12s" %(self.name,),
+                "%9s" %(self.eb,),
+                "%9s" %(self.gain,),
+                "%9s" %(self.sq,),
+                "\n",
+            ))
+        elif self.side == 'An':
+            s = ''.join((
+                "%-12s" %(self.name,),
+                "%9s" %(self.eb,),
+                "%9s" %(self.gain,),
+                "%9s" %(self.loop,),
+                "%9s" %(self.snr,),
+                "\n",
+            ))
+        else:
+            s = ''
+        return s
+    
+    @classmethod
+    def header(self, side:str) -> str:
+        if side == 'Gn':
+            s = ''.join((
+                "\n",
+                "%s" %("="*39,),
+                "\n",
+                "%-12s" %('Name',),
+                "%9s" %('EB',),
+                "%9s" %('GAIN',),
+                "%9s" %('SQ',),
+                "\n",
+                "%s" %("-"*39,),
+                "\n",
+            ))
+        elif side == 'An':
+            s = ''.join((
+                "\n",
+                "%s" %("="*48,),
+                "\n",
+                "%-12s" %('Name',),
+                "%9s" %('EB',),
+                "%9s" %('RX',),
+                "%9s" %('LOOP',),
+                "%9s" %('SNR',),
+                "\n",
+                "%s" %("-"*48,),
+                "\n",
+            ))
+        else:
+            s = ''
+        return s
+
+    @classmethod
+    def footer(self, side:str) -> str:
+        if side == 'Gn':
+            s = "%s\n" %("="*39,)
+        elif side == 'An':
+            s = "%s\n" %("="*48,)
+        else:
+            s = ''
+        return s
+
+    def __str__(self):
+        return self.view()
+        
+    def __repr__(self):
+        return self.view()
+
+
+def write_sideGn(x_G:bytes, patternGn:str) -> str:
     regex = re.compile(patternGn)
+    l = []
+    last_seen = ''
 
     for line in str(x_G).split('\\r\\n'):
         match = regex.search(line)
         if match:
-            if match.groupdict()['name']: 
-                wrmatch(pfile, '\n', match.groupdict()['name'])
-            if match.groupdict()['err1']: 
-                wrmatch(pfile, 'EB(M) ', str(int(match.groupdict()['err1'])) )
+            if match.groupdict()['name'] and \
+                    match.groupdict()['name'] != last_seen:
+                last_seen = match.groupdict()['name']
+                view_master = View('Gn', 'master',
+                    name=match.groupdict()['name'])
+                view_slave = View('Gn', 'slave',
+                    name=match.groupdict()['name'][0] +\
+                    chr(ord(match.groupdict()['name'][1])-1))
+                for i in (view_master, view_slave):
+                    l.append(i)
+                
+            if match.groupdict()['err1']:
+                view_master.eb = int(match.groupdict()['err1'])
             if match.groupdict()['err2']: 
-                wrmatch(pfile, 'EB(S) ', str(int(match.groupdict()['err2'])) )
-            if match.groupdict()['gain']: 
-                wrmatch(pfile, 'Gain  ', match.groupdict()['gain'])
+                view_slave.eb = int(match.groupdict()['err2'])
+            if match.groupdict()['gain']:
+                if not (view_master.gain or view_master.sq):
+                    view_master.gain = match.groupdict()['gain']
+                else:
+                    view_slave.gain = match.groupdict()['gain']
             if match.groupdict()['sq']: 
-                wrmatch(pfile, 'SQ    ', match.groupdict()['sq']) 
+                if not (view_master.sq or view_slave.gain):
+                    view_master.sq = match.groupdict()['sq']
+                else:
+                    view_slave.sq = match.groupdict()['sq']
+        
+    return ''.join((
+        View.header('Gn'), 
+        ''.join(str(i) for i in l[::-1]), 
+        View.footer('Gn'),
+        '\t'.join(i.excel_view() for i in l[::-1]), "\n",
+        View.footer('Gn'),
+        ))
     
-def write_sideAn(pfile, x_A:bytes, patternAn:str):
+def write_sideAn(x_A:bytes, patternAn:str) -> str:
     regex = re.compile(patternAn)
+    l = []
+    last_seen = ''
     
     for line in str(x_A).split('\\r\\n'):
         match = regex.search(line)
         if match:
-            if match.groupdict()['name']: 
-                wrmatch(pfile, '\n', match.groupdict()['name'])
-            if match.groupdict()['err1']: 
-                wrmatch(pfile, 'EB(L) ', str(int(match.groupdict()['err1'])) )
-            if match.groupdict()['gain']: 
-                wrmatch(pfile, 'RX    ', match.groupdict()['gain'])
-            if match.groupdict()['loop']: 
-                wrmatch(pfile, 'LOOP  ', match.groupdict()['loop'])
-            if match.groupdict()['snr']: 
-                wrmatch(pfile, 'SNR   ', match.groupdict()['snr'])
+            if match.groupdict()['name'] and \
+                    match.groupdict()['name'] != last_seen:
+                last_seen = match.groupdict()['name']
+                view_master = View('An', '',
+                    name=match.groupdict()['name'])
+                l.append(view_master)
+                
+            if match.groupdict()['err1']:
+                view_master.eb = int(match.groupdict()['err1'])
+            if match.groupdict()['gain']:
+                view_master.gain = match.groupdict()['gain']
+            if match.groupdict()['loop']:
+                view_master.loop = match.groupdict()['loop']
+            if match.groupdict()['snr']:
+                view_master.snr = match.groupdict()['snr']
     
-def getExecPath():
+    return ''.join((
+        View.header('An'), 
+        ''.join(str(i) for i in l[::-1]), 
+        View.footer('An'),
+        '\t'.join(i.excel_view() for i in l[::-1]), "\n",
+        View.footer('An'), "\n"*3,
+        ))
+
+def get_exec_path():
         try:
             sFile = os.path.abspath(sys.modules['__main__'].__file__)
         except:
@@ -307,9 +437,9 @@ def getExecPath():
 
 #-------------------------------------------------
 try:
-    f = os.path.normpath(str(sys.argv[1]))  #имя файла берем из аргумента
+    f = os.path.normpath(str(sys.argv[1]))  # get name file from *args
 except IndexError:
-    f = os.path.normpath(getExecPath() + '/../MG_log/MG_log.txt')
+    f = os.path.normpath(get_exec_path() + '/../MG_log/MG_log.txt')
 
 try:
     f = rename_file(f)
@@ -355,15 +485,19 @@ try:
     print('-'*74)
 
     with open(f,'w') as myfile:
-        write_sideGn(myfile, x_G, patternGn)
-        write_sideAn(myfile, x_A, patternAn)
+        myfile.write(write_sideGn(x_G, patternGn))
+        myfile.write(write_sideAn(x_A, patternAn))
         myfile.write(pretty_print(x_G))
         myfile.write(pretty_print(x_A))
-        print('Save as '+ f) 
+        print('Save as '+ f)
+    subprocess.Popen('notepad ' + f)
 
 except Exception as err:
     print('Error: %s' %err)
 finally:
     os.system('pause')
+
+
+
 
 
