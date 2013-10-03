@@ -10,7 +10,7 @@ import sys
 import re
 import subprocess
 
-import serial
+#import serial
 
 #-----------------------------------------
 mgsG = (b'\r%07\r\n', #0
@@ -22,6 +22,7 @@ mgsG = (b'\r%07\r\n', #0
          b'\r$3\r\n', #6
          b'\r$1\r\n', #7
          b'\r$0\r\n') #8
+
 mgsGn = (b'',
     b'$D\r\n',
     b'$B\r\n',
@@ -39,7 +40,9 @@ mgs2 = (b'G826\r',  #0     '\rG826\r'
            b'2\r',  #4
            b'M\r',  #5
            b'5\r')  #6
+
 mgs3 = b'\r'
+
 mgsA = (b'%\r\n',         #0
     b'%0113131313131310', #1
      b'%011313131313130', #2
@@ -55,7 +58,8 @@ mgsA = (b'%\r\n',         #0
                b'%01130', #12
                 b'%0110', #13
                   b'%01') #14
-mgsAn = (b'', 
+
+mgsAn = (b'',
      b'OP-Slave\r\n',
     b'6/2-Master\r\n',
     b'6/2-Slave\r\n',
@@ -71,108 +75,121 @@ mgsAn = (b'',
     b'1/2-Slave\r\n',
     b'OUP-Master\r\n')
 
+
+ser = None
+
+
 def return_bytes(func):          # for join
     def wrapper(*args, **kwargs):
         func(*args, **kwargs)
         return b''
     return wrapper
 
+
 @return_bytes
 def sleep(t):
     time.sleep(t)
+
 
 def pretty_print(s:bytes) -> str:
     return '\n'.join(
             str(i)[2:-1] for i in re.split(
             b'(?:\r\n|\r|\n|[\x1b]\S*?(?:H|J)\d*){1,}',
             s) if i)
-    
-def mg_read(t:float) -> bytes:
+
+
+def mg_read(t:float, stream=ser) -> bytes:
     now = time.time()
     y = b''  # wait 10 sec and read buff rs-232
-    while (ser.inWaiting() !=0 ) or (now+t > time.time()):
-        if ser.inWaiting() !=0:
-            y += ser.read(ser.inWaiting())
+    while stream.inWaiting() or (now+t > time.time()):
+        if stream.inWaiting():
+            y += stream.read(stream.inWaiting())
         sleep(0.03)
     print(pretty_print(y))
-    return b'\r\n' + y
+    return y
+
 
 @return_bytes
-def mg_write(x:bytes):
-    for i in range(len(x)):
-        ser.write(x[i:i+1])
-        sleep(0.5)
+def mg_write(l:bytes, stream=ser, t=0.5):
+    for i in l:
+        stream.write(str(i).encode('latin-1'))
+        sleep(t)
 
+        
 #-------------------------------------------------
 #                 side 1
 #-------------------------------------------------
 
-def opros1(i:int) -> bytes:
-    t = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)  # delay
+def opros1(i:int, stream=ser, t_r=0.0, t_wr=0.5) -> bytes:
+    if not t_r:
+        t_r = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)  # delay
     print('\n\n\n'+'Open ' + str(mgsG[i])+'\n\n\n')
-    s = mgsGn[i]       
-    mg_write(mgsG[i])             #заходим в нужный нуп
+    s = mgsGn[i]
+    mg_write(mgsG[i], stream, t_wr)             #заходим в нужный нуп
     if i == 8:
         s = b''.join((s,
-        mg_read(t),
-        mg_write(mgs3+mgs2[6]),   #выходим из первого нупа
-        mg_read(t),
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[6], stream, t_wr),   #выходим из первого нупа
+        mg_read(t_r, stream),
         mgsA[0],
-        mg_read(t)))
-    else: 
+        mg_read(t_r, stream)))
+    else:
         s = b''.join((s,
-        mg_read(t),
-        mg_write(mgs3+mgs2[3]),   #заходим в первый пункт меню
-        mg_read(t),
-        mg_write(mgs3+mgs2[0]),   #G826
-        mg_read(t),
-        mg_write(mgs3+mgs2[5]),   #заходим в главное меню
-        mg_read(t),
-        mg_write(mgs3+mgs2[4]),   #заходим во второй пункт меню
-        mg_read(t),
-        mg_write(mgs3+mgs2[1]),   #STATUS
-        mg_read(t),
-        mg_write(mgs3+mgs2[2]),   #STATUS R
-        mg_read(t)))
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[3], stream, t_wr),   #заходим в первый пункт меню
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[0], stream, t_wr),   #G826
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[5], stream, t_wr),   #заходим в главное меню
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[4], stream, t_wr),   #заходим во второй пункт меню
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[1], stream, t_wr),   #STATUS
+        mg_read(t_r, stream),
+        mg_write(mgs3+mgs2[2], stream, t_wr),   #STATUS R
+        mg_read(t_r, stream)))
     return s
+
 
 #-------------------------------------------------
 #                  side 2
 #-------------------------------------------------
 
-def opros2(i:int) -> bytes:
-    t = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)       # delay
+def opros2(i:int, stream=ser, t_r=0.0, t_wr=0.5) -> bytes:
+    if not t_r:
+        t_r = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)       # delay
     print('\n\n\n'+'Open ' + str(mgsA[i])+'\n\n\n')
-    s = mgsAn[i]                 
+    s = mgsAn[i]
     if i == 14:
         s = b''.join((s,
-        mg_write(mgsA[0]),
-        mg_read(t)))
+        mg_write(mgsA[0], stream, t_wr),
+        mg_read(t, stream)))
     s = b''.join((s,
-    mg_write(mgsA[i]),            #заходим в нужный нуп
+    mg_write(mgsA[i], stream, t_wr),            #заходим в нужный нуп
     sleep(1),
-    mg_write(b'\r\n'),
-    mg_read(t),
-    mg_write(mgs2[3]),            #заходим в первый пункт меню
-    mg_read(t),
-    mg_write(mgs2[0]),            #G826
-    mg_read(t),
-    mg_write(mgs2[5]),            #заходим в главное меню
-    mg_read(t),
-    mg_write(mgs2[4]),            #заходим во второй пункт меню
-    mg_read(t),
-    mg_write(mgs2[1]),            #STATUS
-    mg_read(t)))
+    mg_write(b'\r\n', stream, t_wr),
+    mg_read(t_r, stream),
+    mg_write(mgs2[3], stream, t_wr),            #заходим в первый пункт меню
+    mg_read(t_r, stream),
+    mg_write(mgs2[0], stream, t_wr),            #G826
+    mg_read(t_r, stream),
+    mg_write(mgs2[5], stream, t_wr),            #заходим в главное меню
+    mg_read(t_r, stream),
+    mg_write(mgs2[4], stream, t_wr),            #заходим во второй пункт меню
+    mg_read(t_r, stream),
+    mg_write(mgs2[1], stream, t_wr),            #STATUS
+    mg_read(t_r, stream)))
     if i == 14:
         s = b''.join((s,
-        mg_write(mgs2[5]),        #заходим в главное меню
-        mg_read(t),
-        mg_write(mgs2[6]),        #выходим из первого нупа
-        mg_read(t),
-        mg_write(mgsA[0]),
-        mg_read(t),
-        mg_write(mgs3)))
+        mg_write(mgs2[5], stream, t_wr),        #заходим в главное меню
+        mg_read(t_r, stream),
+        mg_write(mgs2[6], stream, t_wr),        #выходим из первого нупа
+        mg_read(t_r, stream),
+        mg_write(mgsA[0], stream, t_wr),
+        mg_read(t_r, stream),
+        mg_write(mgs3, stream, t_wr)))
     return s
+
 
 #-------------------------------------------------
 def get_filename_data(s:str) -> str:
@@ -188,6 +205,7 @@ def get_filename_data(s:str) -> str:
         '_', datetime.datetime.now().strftime("%d%m%y"),
         r))
 
+
 def rename_file(path_file:str) -> str:
     # get name from path+name
     path1 = os.path.split(path_file)[0]
@@ -201,10 +219,12 @@ def rename_file(path_file:str) -> str:
     # get new name
     return os.path.normpath(path1+'/'+f_data)
 
+
 # create Gen for pattern: join, decode -> del \r\n -> add '|'
 namemgsGen = lambda x: ((lambda i : \
     ''.join((i.decode('latin-1').replace('$', '\$')[:-2], '|')) \
     if i else '')(i) for i in x)
+
 
 patternGn = ''.join((r"""(?x)
     ^
@@ -218,7 +238,7 @@ patternGn = ''.join((r"""(?x)
             :\s\s    (?P<err1>\d+)   \s\s    (?P<err2>\d+)
             # Errored blocks           :  00000189  00000023
         |
-        SYNC: .+ 
+        SYNC: .+
             GAIN:.?(?P<gain>\d+\.?\d*)\s+
             SQ:.?(?P<sq>\d+\.?\d*)
             # SYNC: 02    OPS: 01    PWR:+13.00    GAIN:+15.07    SQ:+07.4
@@ -258,7 +278,7 @@ patternAn = ''.join((r"""(?x)
 
 class View():
     def __init__(self, side='', type='', name='',
-            eb='', gain='', sq='', 
+            eb='', gain='', sq='',
             loop='', snr=''):
         self.side = side
         self.type = type
@@ -302,7 +322,7 @@ class View():
         else:
             s = ''
         return s
-    
+
     @classmethod
     def header(self, side:str) -> str:
         if side == 'Gn':
@@ -348,7 +368,7 @@ class View():
 
     def __str__(self):
         return self.view()
-        
+
     def __repr__(self):
         return self.view()
 
@@ -371,35 +391,36 @@ def write_sideGn(x_G:bytes, patternGn:str) -> str:
                     chr(ord(match.groupdict()['name'][1])-1))
                 for i in (view_master, view_slave):
                     l.append(i)
-                
+
             if match.groupdict()['err1']:
                 view_master.eb = int(match.groupdict()['err1'])
-            if match.groupdict()['err2']: 
+            if match.groupdict()['err2']:
                 view_slave.eb = int(match.groupdict()['err2'])
             if match.groupdict()['gain']:
                 if not (view_master.gain or view_master.sq):
                     view_master.gain = match.groupdict()['gain']
                 else:
                     view_slave.gain = match.groupdict()['gain']
-            if match.groupdict()['sq']: 
+            if match.groupdict()['sq']:
                 if not (view_master.sq or view_slave.gain):
                     view_master.sq = match.groupdict()['sq']
                 else:
                     view_slave.sq = match.groupdict()['sq']
-        
+
     return ''.join((
-        View.header('Gn'), 
-        ''.join(str(i) for i in l[::-1]), 
+        View.header('Gn'),
+        ''.join(str(i) for i in l[::-1]),
         View.footer('Gn'),
         '\t'.join(i.excel_view() for i in l[::-1]), "\n",
         View.footer('Gn'),
         ))
-    
+
+
 def write_sideAn(x_A:bytes, patternAn:str) -> str:
     regex = re.compile(patternAn)
     l = []
     last_seen = ''
-    
+
     for line in str(x_A).split('\\r\\n'):
         match = regex.search(line)
         if match:
@@ -409,7 +430,7 @@ def write_sideAn(x_A:bytes, patternAn:str) -> str:
                 view_master = View('An', '',
                     name=match.groupdict()['name'])
                 l.append(view_master)
-                
+
             if match.groupdict()['err1']:
                 view_master.eb = int(match.groupdict()['err1'])
             if match.groupdict()['gain']:
@@ -418,14 +439,15 @@ def write_sideAn(x_A:bytes, patternAn:str) -> str:
                 view_master.loop = match.groupdict()['loop']
             if match.groupdict()['snr']:
                 view_master.snr = match.groupdict()['snr']
-    
+
     return ''.join((
-        View.header('An'), 
-        ''.join(str(i) for i in l[::-1]), 
+        View.header('An'),
+        ''.join(str(i) for i in l[::-1]),
         View.footer('An'),
         '\t'.join(i.excel_view() for i in l[::-1]), "\n",
         View.footer('An'), "\n"*3,
         ))
+
 
 def get_exec_path():
         try:
@@ -435,13 +457,7 @@ def get_exec_path():
         return os.path.dirname(sFile)
 
 
-#-------------------------------------------------
-try:
-    f = os.path.normpath(str(sys.argv[1]))  # get name file from *args
-except IndexError:
-    f = os.path.normpath(get_exec_path() + '/../MG_log/MG_log.txt')
-
-try:
+def main():
     f = rename_file(f)
     print(f)
 
@@ -456,12 +472,12 @@ try:
     ser.dsrdtr = False
     ser.open()
     print('Connect rs-232 port...')
-    
+
     x_G = b''.join((
-        sleep(3), 
+        sleep(3),
         mg_write(mgsG[0]),
         sleep(10),
-        b'\r\n', 
+        b'\r\n',
             (b''.join(
             (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
             ).join([opros1(i) for i in range(1,8)],),
@@ -469,10 +485,10 @@ try:
         mg_write(mgs3),
         )
     )
-    
+
     x_A = b''.join((
         sleep(5),
-        b'\r\n', 
+        b'\r\n',
             (b''.join(
             (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
             ).join([opros2(i) for i in range(1,15)],),
@@ -481,7 +497,7 @@ try:
 
     ser.close()
     print('Close rs-232 port.')
-    
+
     print('-'*74)
 
     with open(f,'w') as myfile:
@@ -491,13 +507,19 @@ try:
         myfile.write(pretty_print(x_A))
         print('Save as '+ f)
     subprocess.Popen('notepad ' + f)
-
-except Exception as err:
-    print('Error: %s' %err)
-finally:
-    os.system('pause')
+    return
 
 
+#-------------------------------------------------
+if __name__ == '__main__':
+    try:
+        f = os.path.normpath(str(sys.argv[1]))  # get name file from *args
+    except IndexError:
+        f = os.path.normpath(get_exec_path() + '/../MG_log/MG_log.txt')
 
-
-
+    try:
+        main()
+    except Exception as err:
+        print('Error: %s' %err)
+    finally:
+        os.system('pause')

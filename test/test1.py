@@ -14,9 +14,9 @@ class monitoringTestCase(unittest.TestCase):
 
     def test_pretty_print(self):
         with open('test/input1', 'rb') as f_in1,\
-        open('test/hum_read_output1', 'r') as f_out1,\
-        open('test/input2', 'rb') as f_in2,\
-        open('test/hum_read_output2', 'r') as f_out2:
+                open('test/hum_read_output1', 'r') as f_out1,\
+                open('test/input2', 'rb') as f_in2,\
+                open('test/hum_read_output2', 'r') as f_out2:
             self.testdata_in1 = f_in1.read()
             self.testdata_out1 = f_out1.read()
             self.testdata_in2 = f_in2.read()
