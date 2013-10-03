@@ -1,0 +1,67 @@
+4/2-Slave
+0113131310%*13131310
+*131310
+*1310
+*10
+FlexDSL Tabletop Single E1 120 Ohm
+ID 4/2 SLAVE
+HW Rev. B0
+SW Rev. 1.6.8.32
+FW Rev. R1.7  
+Copyright (C) 2002 by Nateks Ltd.
+------------- Main Menu -----------------
+1. Performance management (PM)
+2. Fault and maintenance management (FMM)
+3. Configuration management (CM)
+5. Exit
+-----------------------------------------
+CP_MM>Select [1..5]: 
+1
+Performance management activated
+Enter <M> to return to MAIN, or <H> for HELP information
+CP_PM>
+G826
+----------------------------------------------------------------------
+G.826 Error Performance  :    CRC6      FEBE 
+----------------------------------------------------------------------
+Errored blocks           :  00000224  00000000
+Errored seconds          :  00000100  00000000
+Severely errored seconds :  00000001  00000000
+Background block errors  :  00000165  00000000
+Available time           :  00127039  00127039
+Unavailable time         :  00000000  00000000
+----------------------------------------------------------------------
+CP_PM>
+M
+FlexDSL Tabletop Single E1 120 Ohm
+ID 4/2 SLAVE
+HW Rev. B0
+SW Rev. 1.6.8.32
+FW Rev. R1.7  
+Copyright (C) 2002 by Nateks Ltd.
+------------- Main Menu -----------------
+1. Performance management (PM)
+2. Fault and maintenance management (FMM)
+3. Configuration management (CM)
+5. Exit
+-----------------------------------------
+CP_MM>Select [1..5]: 
+2
+Fault and maintenance management activated
+Enter <M> to return to MAIN, or <H> for HELP information
+CP_FMM>
+STATUS
+----------------------------------------------------------------------
+Local System Status
+----------------------------------------------------------------------
+LOSD      :     1
+SEGA      :     1
+PS        :     1
+SEGD      :     1
+Tx power  :  13.5 dBm
+Rx gain   :  23.9 dB
+Loop attn.:  18.0 dB
+SNR       :  41.0 dB
+Bitrate   :  2056 kbit/s
+----------------------------------------------------------------------
+CP_FMM>

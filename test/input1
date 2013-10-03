@@ -1,0 +1,54 @@
+
+$3
+
+$5:MSDSL_07_FMM> [2J[4;18H        FlexDSL MSDSL[5;18H        E1 Monitor V3.4[6;18H [7;18H [8;18H  +------------------------+[9;18H  |       Main Menu        |[10;18H  +------------------------+[11;18H1. Performance management (PM)[12;18H2. Fault and maintenance management (FMM)[13;18H3. Configuration management (CM)[14;18H4. Security management (SM)[15;18H
+
+$3:MSDSL_07> Select [1..4]: 
+1
+Invalid command[2J[4;18H        FlexDSL MSDSL[5;18H        E1 Monitor V3.4[6;18H [7;18H [8;18H  +------------------------+[9;18H  |       Main Menu        |[10;18H  +------------------------+[11;18H1. Performance management (PM)[12;18H2. Fault and maintenance management (FMM)[13;18H3. Configuration management (CM)[14;18H4. Security management (SM)[15;18H
+
+$3:MSDSL_07> Select [1..4]: [2J[0;0H
+44:16:10  Performance management activated
+          Enter <M> to return MAIN, or <H> for HELP information
+$3:MSDSL_07_PM> 
+G8
+$3:MSDSL_07_PM> 26
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+G.826 Error Performance  :   CRC6 A    FEBE A
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Errored blocks           :  00000640  00000158
+Errored seconds          :  00000081  00000029
+Severely errored seconds :  00000003  00000000
+ESR [%]                  :      0.01      0.00
+SESR [%]                 :      0.00      0.00
+BBER [%]                 :      0.00      0.00
+Available time           :  00740626  00740626
+Unavailable time         :  00000042  00000042
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$3:MSDSL_07_PM> 
+M
+$3:MSDSL_07_PM> [2J[4;18H        FlexDSL MSDSL[5;18H        E1 Monitor V3.4[6;18H [7;18H [8;18H  +------------------------+[9;18H  |       Main Menu        |[10;18H  +------------------------+[11;18H1. Performance management (PM)[12;18H2. Fault and maintenance management (FMM)[13;18H3. Configuration management (CM)[14;18H4. Security management (SM)[15;18H
+
+$3:MSDSL_07> Select [1..4]: 
+2[2J[4;18H        FlexDSL MSDSL[5;18H        E1 Monitor V3.4[6;18H [7;18H [8;18H  +------------------------+[9;18H  |       Main Menu        |[10;18H  +------------------------+[11;18H1. Performance management (PM)[12;18H2. Fault and maintenance management (FMM)[13;18H3. Configuration management (CM)[14;18H4. Security management (SM)[15;18H
+
+$3:MSDSL_07> Select [1..4]: [2J[0;0H
+44:57:80  Fault and maintenance management activated
+          Enter <M> to return MAIN, or <H> for HELP information
+$3:MSDSL_07_FMM> 
+ST
+$3:MSDSL_07_FMM> ATUS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Local System Status                                             V3.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SYNC: 02    OPS: 01    PWR:+13.00    GAIN:+14.16    SQ:+08.5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$3:MSDSL_07_FMM> 
+ST
+$3:MSDSL_07_FMM> ATUS R
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Remote System Status                                             V3.4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SYNC: 02    OPS: 01    PWR:+13.00    GAIN:+15.37    SQ:+06.5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$3:MSDSL_07_FMM> 
