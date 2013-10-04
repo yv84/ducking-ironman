@@ -535,8 +535,8 @@ def main():
     print(f)
 
     with Ser() as context:
-        x_G = Ser.read_gn()
-        x_A = Ser.read_an()
+        x_G = context.read_gn()
+        x_A = context.read_an()
 
     with open(f,'w') as myfile:
         myfile.write(write_sideGn(x_G, PATTERNGN))
