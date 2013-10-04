@@ -1,10 +1,83 @@
-4/2-Slave
-0113131310%*13131310
+5/2-Master
+0113131313130%*13131313130
+*131313130
+*1313130
+*13130
+*130
+*0
+FlexDSL Tabletop Single E1 120 Ohm
+ID 5/2 MASTER
+HW Rev. B0
+SW Rev. 1.6.8.32
+FW Rev. R1.7  
+Copyright (C) 2002 by Nateks Ltd.
+------------- Main Menu -----------------
+1. Performance management (PM)
+2. Fault and maintenance management (FMM)
+3. Configuration management (CM)
+5. Exit
+-----------------------------------------
+CO_MM>Select [1..5]: 
+1
+Performance management activated
+Enter <M> to return to MAIN, or <H> for HELP information
+CO_PM>
+G826
+----------------------------------------------------------------------
+G.826 Error Performance  :    CRC6      FEBE 
+----------------------------------------------------------------------
+Errored blocks           :  00000088  00000000
+Errored seconds          :  00000052  00000000
+Severely errored seconds :  00000000  00000000
+Background block errors  :  00000088  00000000
+Available time           :  00127136  00127136
+Unavailable time         :  00000000  00000000
+----------------------------------------------------------------------
+CO_PM>
+M
+FlexDSL Tabletop Single E1 120 Ohm
+ID 5/2 MASTER
+HW Rev. B0
+SW Rev. 1.6.8.32
+FW Rev. R1.7  
+Copyright (C) 2002 by Nateks Ltd.
+------------- Main Menu -----------------
+1. Performance management (PM)
+2. Fault and maintenance management (FMM)
+3. Configuration management (CM)
+5. Exit
+-----------------------------------------
+CO_MM>Select [1..5]: 
+2
+Fault and maintenance management activated
+Enter <M> to return to MAIN, or <H> for HELP information
+CO_FMM>
+STATUS
+----------------------------------------------------------------------
+Local System Status
+----------------------------------------------------------------------
+LOSD      :     1
+SEGA      :     1
+PS        :     1
+SEGD      :     1
+Tx power  :  13.5 dBm
+Rx gain   :  23.8 dB
+Loop attn.:  17.7 dB
+SNR       :  38.0 dB
+Bitrate   :  2056 kbit/s
+SRU #     :     0
+----------------------------------------------------------------------
+CO_FMM>
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+$5
+5/2-Slave
+011313131310%*1313131310
+*13131310
 *131310
 *1310
 *10
 FlexDSL Tabletop Single E1 120 Ohm
-ID 4/2 SLAVE
+ID 5/2 SLAVE
 HW Rev. B0
 SW Rev. 1.6.8.32
 FW Rev. R1.7  
@@ -24,17 +97,17 @@ G826
 ----------------------------------------------------------------------
 G.826 Error Performance  :    CRC6      FEBE 
 ----------------------------------------------------------------------
-Errored blocks           :  00000224  00000000
-Errored seconds          :  00000100  00000000
-Severely errored seconds :  00000001  00000000
-Background block errors  :  00000165  00000000
-Available time           :  00127039  00127039
+Errored blocks           :  00000160  00000007
+Errored seconds          :  00000051  00000003
+Severely errored seconds :  00000001  00000001
+Background block errors  :  00000160  00000007
+Available time           :  00127464  00127464
 Unavailable time         :  00000000  00000000
 ----------------------------------------------------------------------
 CP_PM>
 M
 FlexDSL Tabletop Single E1 120 Ohm
-ID 4/2 SLAVE
+ID 5/2 SLAVE
 HW Rev. B0
 SW Rev. 1.6.8.32
 FW Rev. R1.7  
@@ -60,8 +133,8 @@ PS        :     1
 SEGD      :     1
 Tx power  :  13.5 dBm
 Rx gain   :  23.9 dB
-Loop attn.:  18.0 dB
-SNR       :  41.0 dB
+Loop attn.:  17.8 dB
+SNR       :  39.6 dB
 Bitrate   :  2056 kbit/s
 ----------------------------------------------------------------------
 CP_FMM>

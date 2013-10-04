@@ -30,7 +30,7 @@ class monitoringTestCase(unittest.TestCase):
         stream = io.BytesIO(s)
         stream.inWaiting = lambda : len(s)-stream.tell()
         ser = stream
-        self.assertTrue(monitoring.mg_read(0.001, stream) == s)
+        self.assertTrue(monitoring.Ser.mg_read(0.001, stream) == s)
 
     def test_mg_write(self):
         pass
@@ -42,7 +42,7 @@ class monitoringTestCase(unittest.TestCase):
         ser = stream
         x = sys.stdout
         sys.stdout = None
-        monitoring.opros1(1, stream,  0.001, 0)
+        monitoring.Ser.opros1(1, stream,  0.001, 0)
         sys.stdout = x
         self.assertTrue(True)
 
@@ -53,7 +53,7 @@ class monitoringTestCase(unittest.TestCase):
         ser = stream
         x = sys.stdout
         sys.stdout = None
-        monitoring.opros2(1, stream,  0.001, 0)
+        monitoring.Ser.opros2(1, stream,  0.001, 0)
         sys.stdout = x
         self.assertTrue(True)
 
@@ -66,7 +66,29 @@ class monitoringTestCase(unittest.TestCase):
             "test/today_\d{6}.txt")
 
     def test_namemgsGen(self):
-        pass
+        self.assertMultiLineEqual(''.join(
+            (monitoring.name_mgs_gen(monitoring.MGSGN)) )[:-1],
+            "\$D|\$B|\$9|\$7|\$5|\$3|\$1")
+
+    def test_write_sideGn(self):
+        with open('test/input1', 'rb') as f_in1, \
+                open('test/hum_read_output_result1', 'r') as f_out1:
+            self.testdata_in1 = f_in1.read()
+            self.testdata_out1 = f_out1.read()
+        self.assertMultiLineEqual(
+            monitoring.write_sideGn(self.testdata_in1, monitoring.PATTERNGN),
+            self.testdata_out1)
+
+    def test_write_sideAn(self):
+        with open('test/input2', 'rb') as f_in2, \
+               open('test/hum_read_output_result2', 'r') as f_out2:
+            self.testdata_in2 = f_in2.read()
+            self.testdata_out2 = f_out2.read()
+        print(len(monitoring.write_sideAn(self.testdata_in2, monitoring.PATTERNAN)))
+        print(len(self.testdata_out2))
+        self.assertMultiLineEqual(
+            monitoring.write_sideAn(self.testdata_in2, monitoring.PATTERNAN),
+            self.testdata_out2)
 
 
 if __name__ == '__main__':
