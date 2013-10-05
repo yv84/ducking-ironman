@@ -106,8 +106,12 @@ def pretty_print(s:bytes) -> str:
 
 
 class Ser():
-    def __init__(self):
-        pass
+    def __init__(self, stream):
+        self.stream = stream
+        self.t_wr = 0.5
+        self.t1 = lambda i: float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)
+        self.t2 = lambda i: float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)
+        self.tr = 0.01
 
     def __enter__(self):
         ser.baudrate = 9600
@@ -119,6 +123,7 @@ class Ser():
         ser.rtscts = False
         ser.dsrdtr = False
         ser.open()
+        print('-'*74)
         print('Connect rs-232 port...')
         return self
 
@@ -127,140 +132,130 @@ class Ser():
         print('Close rs-232 port.')
         print('-'*74)
 
-    @staticmethod
-    def mg_read(t:float, stream=ser) -> bytes:
+    def mg_read(self) -> bytes:
         now = time.time()
-        y = b''  # wait 10 sec and read buff rs-232
-        while stream.inWaiting() or (now+t > time.time()):
-            if stream.inWaiting():
-                y += stream.read(stream.inWaiting())
+        s = b''  # wait 10 sec and read buff rs-232
+        while self.stream.inWaiting() or (now+self.tr > time.time()):
+            if self.stream.inWaiting():
+                s += self.stream.read(self.stream.inWaiting())
             sleep(0.03)
-        print(pretty_print(y))
-        return y
+        print(pretty_print(s))
+        return s
 
-    @staticmethod
     @return_bytes
-    def mg_write(l:bytes, stream=ser, t=0.5):
-        for i in l:
-            stream.write(str(i).encode('latin-1'))
-            sleep(t)
+    def mg_write(self, s:bytes):
+        for i in s:
+            self.stream.write(chr(i).encode('latin-1'))
+            sleep(self.t_wr)
 
     #-------------------------------------------------
     #                 side 1
     #-------------------------------------------------
 
-    @classmethod
-    def opros1(self, i:int, stream=ser, t_r=0.0, t_wr=0.5) -> bytes:
-        if not t_r:
-            # delay
-            t_r = float(5+(9-i)*1+(9-i)**2*0.4+(9-i)**3*0.01)
+    def opros1(self, i:int) -> bytes:
+        self.tr = self.t1(i)
         print('\n\n\n'+'Open ' + str(MGSG[i])+'\n\n\n')
         s = MGSGN[i]
         #заходим в нужный нуп
-        self.mg_write(MGSG[i], stream, t_wr)
+        self.mg_write(MGSG[i])
         if i == 8:
             s = b''.join((s,
-            self.mg_read(t_r, stream),
+            self.mg_read(),
             #выходим из первого нупа
-            self.mg_write(MGS3+MGS2[6], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[6]),
+            self.mg_read(),
             MGSA[0],
-            self.mg_read(t_r, stream)))
+            self.mg_read()))
         else:
             s = b''.join((s,
-            self.mg_read(t_r, stream),
+            self.mg_read(),
             #заходим в первый пункт меню
-            self.mg_write(MGS3+MGS2[3], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[3]),
+            self.mg_read(),
             #G826
-            self.mg_write(MGS3+MGS2[0], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[0]),
+            self.mg_read(),
             #заходим в главное меню
-            self.mg_write(MGS3+MGS2[5], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[5]),
+            self.mg_read(),
             #заходим во второй пункт меню
-            self.mg_write(MGS3+MGS2[4], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[4]),
+            self.mg_read(),
             #STATUS
-            self.mg_write(MGS3+MGS2[1], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS3+MGS2[1]),
+            self.mg_read(),
             #STATUS R
-            self.mg_write(MGS3+MGS2[2], stream, t_wr),
-            self.mg_read(t_r, stream)))
+            self.mg_write(MGS3+MGS2[2]),
+            self.mg_read()))
         return s
 
     #-------------------------------------------------
     #                  side 2
     #-------------------------------------------------
 
-    @classmethod
-    def opros2(self, i:int, stream=ser, t_r=0.0, t_wr=0.5) -> bytes:
-        if not t_r:
-            # delay
-            t_r = float(3+(15-i)*0.35+(15-i)*(15-i)*0.035)
+    def opros2(self, i:int) -> bytes:
+        self.tr = self.t2(i)
         print('\n\n\n'+'Open ' + str(MGSA[i])+'\n\n\n')
         s = MGSAN[i]
         if i == 14:
             s = b''.join((s,
-            self.mg_write(MGSA[0], stream, t_wr),
-            self.mg_read(t, stream)))
+            self.mg_write(MGSA[0]),
+            self.mg_read()))
         s = b''.join((s,
         #заходим в нужный нуп
-        self.mg_write(MGSA[i], stream, t_wr),
+        self.mg_write(MGSA[i]),
         sleep(1),
-        self.mg_write(b'\r\n', stream, t_wr),
-        self.mg_read(t_r, stream),
+        self.mg_write(b'\r\n'),
+        self.mg_read(),
         #заходим в первый пункт меню
-        self.mg_write(MGS2[3], stream, t_wr),
-        self.mg_read(t_r, stream),
+        self.mg_write(MGS2[3]),
+        self.mg_read(),
         #G826
-        self.mg_write(MGS2[0], stream, t_wr),
-        self.mg_read(t_r, stream),
+        self.mg_write(MGS2[0]),
+        self.mg_read(),
         #заходим в главное меню
-        self.mg_write(MGS2[5], stream, t_wr),
-        self.mg_read(t_r, stream),
+        self.mg_write(MGS2[5]),
+        self.mg_read(),
         #заходим во второй пункт меню
-        self.mg_write(MGS2[4], stream, t_wr),
-        self.mg_read(t_r, stream),
+        self.mg_write(MGS2[4]),
+        self.mg_read(),
         #STATUS
-        self.mg_write(MGS2[1], stream, t_wr),
-        self.mg_read(t_r, stream)))
+        self.mg_write(MGS2[1]),
+        self.mg_read()))
         if i == 14:
             s = b''.join((s,
             #заходим в главное меню
-            self.mg_write(MGS2[5], stream, t_wr),
-            self.mg_read(t_r, stream),
+            self.mg_write(MGS2[5]),
+            self.mg_read(),
             #выходим из первого нупа
-            self.mg_write(MGS2[6], stream, t_wr),
-            self.mg_read(t_r, stream),
-            self.mg_write(MGSA[0], stream, t_wr),
-            self.mg_read(t_r, stream),
-            self.mg_write(MGS3, stream, t_wr)))
+            self.mg_write(MGS2[6]),
+            self.mg_read(),
+            self.mg_write(MGSA[0]),
+            self.mg_read(),
+            self.mg_write(MGS3)))
         return s
 
-    @classmethod
     def read_gn(self) -> bytes:
         return b''.join((
             sleep(3),
-            mg_write(MGSG[0]),
+            self.mg_write(MGSG[0]),
             sleep(10),
             b'\r\n',
             (b''.join(
                 (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
-                ).join([opros1(i) for i in range(1,8)],),
-            opros1(8),
-            mg_write(MGS3),
+                ).join([self.opros1(i) for i in range(1,8)],),
+            self.opros1(8),
+            self.mg_write(MGS3),
             )
         )
 
-    @classmethod
     def read_an(self) -> bytes:
         return b''.join((
             sleep(5),
             b'\r\n',
             (b''.join(
                 (b'\r\n'*3, b'!'*40, b'\r\n'*3),)
-                ).join([opros2(i) for i in range(1,15)],),
+                ).join([self.opros2(i) for i in range(1,15)],),
             )
         )
 
@@ -317,6 +312,7 @@ PATTERNGN = ''.join((r"""(?x)
             # SYNC: 02    OPS: 01    PWR:+13.00    GAIN:+15.07    SQ:+07.4
         )
     )
+    \r?
     $
     """))
 
@@ -345,6 +341,7 @@ PATTERNAN = ''.join((r"""(?x)
             #SNR       :  39.9
         )
     )
+    \r?
     $
     """))
 
@@ -530,11 +527,12 @@ def get_exec_path():
         return os.path.dirname(sFile)
 
 
-def main():
+def main(f, stream):
     f = rename_file(f)
     print(f)
 
-    with Ser() as context:
+    x_G, x_A = b'', b''
+    with Ser(stream) as context:
         x_G = context.read_gn()
         x_A = context.read_an()
 
@@ -556,7 +554,7 @@ if __name__ == '__main__':
         f = os.path.normpath(get_exec_path() + '/../MG_log/MG_log.txt')
 
     try:
-        main()
+        main(f, ser)
     except Exception as err:
         print('Error: %s' %err)
     finally:
