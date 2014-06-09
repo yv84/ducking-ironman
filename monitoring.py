@@ -270,7 +270,7 @@ def get_filename_data(s:str) -> str:
         (n,r) = (s,'')
     return ''.join((
         n,
-        '_', datetime.datetime.now().strftime("%d%m%y"),
+        datetime.datetime.now().strftime("_%d%m%y_%H%M"),
         r))
 
 
